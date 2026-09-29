@@ -275,41 +275,22 @@ Limitações:
 
 Finalize com um resumo curto.`;
 
-    // DITTO — chamada Gemini pela Interactions API.
-    // Para um site público, o ideal é mover a chave para um backend.
-    const API_KEY = "AQ.Ab8RN6LU31zS6miRduaE562bJlBivMky6K6VKxeiQpuuz8ZUMA";
-    const MODEL = "gemini-3.8-flash";
-    const url = "https://generativelanguage.googleapis.com/v1beta/interactions";
+    // DITTO — chama o backend seguro hospedado no Render.
+    // A chave Gemini fica SOMENTE no servidor, nunca no HTML.
+    const BACKEND_URL = "https://ditto-backend-4mbq.onrender.com";
 
-    if (!API_KEY || API_KEY === "AQ.Ab8RN6LU31zS6miRduaE562bJlBivMky6K6VKxeiQpuuz8ZUMA") {
-      throw new Error("Cole sua nova chave Gemini na constante API_KEY do index.html antes de publicar.");
-    }
+    const formData = new FormData();
+    formData.append("image", selectedFile);
 
-    const r = await fetch(url, {
+    const r = await fetch(BACKEND_URL + "/api/analisar", {
       method:"POST",
-      headers:{
-        "Content-Type":"application/json",
-        "x-goog-api-key":API_KEY,
-        "Api-Revision":"2026-05-20"
-      },
-      body:JSON.stringify({
-        model:MODEL,
-        input:[
-          {type:"text", text:prompt},
-          {type:"image", data:base64, mime_type:selectedFile.type}
-        ]
-      })
+      body:formData
     });
 
-    const data = await r.json();
-    if (!r.ok) throw new Error(data?.error?.message || "Erro da Gemini");
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data?.error || "Erro ao consultar o backend");
 
-    const text = (data?.steps || [])
-      .flatMap(step => step?.content || [])
-      .filter(part => part?.type === "text")
-      .map(part => part?.text || "")
-      .join("\n")
-      .trim() || data?.output_text || "A Gemini não retornou uma análise.";
+    const text = data?.text?.trim() || "A Gemini não retornou uma análise.";
 
     // A RESPOSTA REAL DA IA APARECE NA PÁGINA.
     analysis.textContent = text;
