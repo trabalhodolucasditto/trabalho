@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DITTO • Criar Novo Ser</title>
+<title>DITTO</title>
 <style>
 :root{
   --bg:#120c2b;
@@ -90,7 +90,7 @@ h1{margin:0;font-size:38px;text-align:center;flex:1;color:#ddd5e8}
       <div class="logo-mark"></div>
       <div><b>DITTO</b><span>GENETIC DESIGN LAB</span></div>
     </div>
-    <h1>Área de Trabalho: Criar Novo Ser</h1>
+    <h1>Área de Trabalho</h1>
   </header>
 
   <div class="steps">
@@ -118,7 +118,7 @@ h1{margin:0;font-size:38px;text-align:center;flex:1;color:#ddd5e8}
           <p style="color:var(--muted);line-height:1.7">Cada imagem possui padrões de cor, luminosidade, textura e distribuição de pixels. Nesta demonstração, esses dados são convertidos de forma determinística em bases <b style="color:#73f59f">A • T • C • G</b>.</p>
           <div class="dna-art"><span></span><span></span></div>
           <div class="result" id="result">
-            <h2>🤖 Análise da IA — Gemini</h2>
+            <h2>🤖 Análise da IA</h2>
             <div id="analysis" class="ai-analysis">Aguardando a análise da imagem...</div>
 
             <h2 style="margin-top:22px">🧬 DNA sintético gerado</h2>
@@ -275,35 +275,41 @@ Limitações:
 
 Finalize com um resumo curto.`;
 
-    // Protótipo escolar: a chave fica no HTML.
-    // Para um site público, mova a chamada da API para um backend.
-    const API_KEY = "AQ.Ab8RN6KPlrmfEPvcj4QbHS5bQgHev2kVmtNiSnE3Iv5gm3bumw";
+    // DITTO — chamada Gemini pela Interactions API.
+    // Para um site público, o ideal é mover a chave para um backend.
+    const API_KEY = "AQ.Ab8RN6LU31zS6miRduaE562bJlBivMky6K6VKxeiQpuuz8ZUMA";
     const MODEL = "gemini-3.8-flash";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
+    const url = "https://generativelanguage.googleapis.com/v1beta/interactions";
+
+    if (!API_KEY || API_KEY === "AQ.Ab8RN6LU31zS6miRduaE562bJlBivMky6K6VKxeiQpuuz8ZUMA") {
+      throw new Error("Cole sua nova chave Gemini na constante API_KEY do index.html antes de publicar.");
+    }
 
     const r = await fetch(url, {
       method:"POST",
-      headers:{"Content-Type":"application/json"},
+      headers:{
+        "Content-Type":"application/json",
+        "x-goog-api-key":API_KEY,
+        "Api-Revision":"2026-05-20"
+      },
       body:JSON.stringify({
-        contents:[{
-          parts:[
-            {text:prompt},
-            {inline_data:{mime_type:selectedFile.type, data:base64}}
-          ]
-        }],
-        generationConfig:{
-          temperature:0.35,
-          maxOutputTokens:2200
-        }
+        model:MODEL,
+        input:[
+          {type:"text", text:prompt},
+          {type:"image", data:base64, mime_type:selectedFile.type}
+        ]
       })
     });
 
     const data = await r.json();
     if (!r.ok) throw new Error(data?.error?.message || "Erro da Gemini");
 
-    const text = data?.candidates?.[0]?.content?.parts
-      ?.map(x => x.text || "")
-      .join("") || "A Gemini não retornou uma análise.";
+    const text = (data?.steps || [])
+      .flatMap(step => step?.content || [])
+      .filter(part => part?.type === "text")
+      .map(part => part?.text || "")
+      .join("\n")
+      .trim() || data?.output_text || "A Gemini não retornou uma análise.";
 
     // A RESPOSTA REAL DA IA APARECE NA PÁGINA.
     analysis.textContent = text;
