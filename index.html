@@ -216,10 +216,9 @@ function loadImage(file){
 }
 
 /*
-  DEMONSTRAÇÃO:
-  A análise visual é feita pela Gemini; o ATCG abaixo é uma representação fictícia para o projeto escolar.
-  Para uma IA real, conecte o botão a um backend seguro em /api/analisar.
-  Nunca coloque uma chave de API secreta diretamente neste HTML.
+  DITTO:
+  A imagem é enviada ao backend seguro do Render. A chave Gemini fica somente no servidor.
+  O ATCG abaixo é uma representação fictícia para o projeto escolar.
 */
 analyzeBtn.onclick = async () => {
   if (!selectedFile) return notify("Escolha uma imagem primeiro.");
@@ -232,65 +231,24 @@ analyzeBtn.onclick = async () => {
   result.scrollIntoView({behavior:"smooth", block:"center"});
 
   try {
-    const base64 = await fileToBase64(selectedFile);
-
-    const prompt = `Você é a IA visual do projeto escolar DITTO.
-Analise cuidadosamente a imagem enviada e responda em português do Brasil.
-
-IMPORTANTE:
-- Não identifique pessoas reais.
-- Se houver um personagem fictício reconhecível, informe o nome e diferencie informações conhecidas de estimativas visuais.
-- Se for um animal, informe espécie/raça provável e características observáveis.
-- Descreva SOMENTE o que a imagem permite observar ou estimar.
-- Altura, largura e peso devem ser marcados como "estimativa visual" ou "não determinável pela imagem" quando não puderem ser medidos.
-- Seja detalhado porque o texto será mostrado diretamente no site.
-
-Use exatamente esta organização:
-
-🔎 IDENTIFICAÇÃO
-Tipo:
-Nome/espécie/personagem:
-Confiança:
-
-👁️ DESCRIÇÃO VISUAL
-Descrição:
-
-🧬 CARACTERÍSTICAS
-Cor predominante:
-Cor dos olhos:
-Tamanho/porte:
-Altura:
-Largura:
-Peso:
-Características físicas:
-Roupas/acessórios:
-Outros detalhes:
-
-🎭 DADOS DO PERSONAGEM (se aplicável)
-Informações conhecidas:
-Estimativas pela aparência:
-
-📝 OBSERVAÇÕES
-Limitações:
-
-Finalize com um resumo curto.`;
-
-    // DITTO — chama o backend seguro hospedado no Render.
-    // A chave Gemini fica SOMENTE no servidor, nunca no HTML.
+    // A chave Gemini fica SOMENTE no Render. O navegador envia apenas a imagem.
     const BACKEND_URL = "https://ditto-backend-4mbq.onrender.com";
 
     const formData = new FormData();
     formData.append("image", selectedFile);
 
-    const r = await fetch(BACKEND_URL + "/api/analisar", {
-      method:"POST",
-      body:formData
+    const r = await fetch(`${BACKEND_URL}/api/analisar`, {
+      method: "POST",
+      body: formData
     });
 
     const data = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(data?.error || "Erro ao consultar o backend");
+    if (!r.ok) {
+      throw new Error(data?.error || `O servidor respondeu HTTP ${r.status}.`);
+    }
 
-    const text = data?.text?.trim() || "A Gemini não retornou uma análise.";
+    const text = (data?.text || "").trim();
+    if (!text) throw new Error("O backend não retornou a análise da Gemini.");
 
     // A RESPOSTA REAL DA IA APARECE NA PÁGINA.
     analysis.textContent = text;
